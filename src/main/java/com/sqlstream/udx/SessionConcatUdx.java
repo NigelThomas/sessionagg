@@ -202,17 +202,19 @@ public class SessionConcatUdx
         for (int c = 2; c <= inputColumnCount; c++) {
             if (c != pidx) {
                 // do not include the partition column in the concatenation
+                // this should work for most types including INT, BIGINT, VARCHAR and CHAR and VARBINARY
                 String fValue = in.getString(c);
-
+                
                 if (!first) {
                     result.append(fieldSeparator);
                 } else {
                     first = false;
                 }
 
-
-                // this should work for BIGINT, VARCHAR and CHAR; will it work for VARBINARY?
-                result.append(in.getString(c));
+                if (!in.wasNull()) {
+                    // only append the value if it is non-null
+                    result.append(fValue);
+                }
 
             }
         }
