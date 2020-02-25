@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+// Example build.xml for SessionAgg
+// Copyright (C) 2014-2019 SQLstream, Inc.
+// 
+// Make sure SQLSTREAM_HOME variable is set (dor root install, just source /etc/sqlstream/environment)
+// ant -p   # to list the targets
+// ant jar  # to generate the jar file
+//
+//
+-->
+
+<project name="SessionAgg" basedir="." default="jar">
+  <dirname property="exampleApp.dir" file="${ant.file}" />
+
+  <!-- application build root -->
+  <property name="example.dir" location="${exampleApp.dir}"/>
+
+  <!-- Directories -->
+
+  <!-- directory for SQLstream client-side installation -->
+  <property name="sqlstream.relative.home" location="../../../aspen"/>
+  <property environment="env"/>
+  <condition property="sqlstream.home" 
+      value="${env.SQLSTREAM_HOME}">
+    <isset property="env.SQLSTREAM_HOME"/>
+  </condition>
+  <condition property="sqlstream.home" 
+      value="${env.ASPEN_HOME}" else="${sqlstream.relative.home}">
+    <isset property="env.ASPEN_HOME"/>
+  </condition>
+
+  <!-- directory for SQLstream client driver components -->
+  <condition property="sqlstream.jdbc.dir" 
+      value="${env.SQLSTREAM_HOME}/lib" else="${sqlstream.home}/dist/jdbc">
+    <isset property="env.SQLSTREAM_HOME"/>
+  </condition>
+  <property name="sqlstream.jdbc.jar" 
+    location="${sqlstream.jdbc.dir}/sqlstream-jdbc-complete.jar"/>
+
+  <!-- directory for SQLstream server library -->
+  <condition property="sqlstream.lib.dir"
+      value="${env.SQLSTREAM_HOME}/lib" else="${sqlstream.home}/dist/server">
+    <isset property="env.SQLSTREAM_HOME"/>
+  </condition>
+
+  <!-- directory for non-generated source code -->
+  <property name="example.src.dir" location="${example.dir}/src"/>
+
+  <!-- directory for example app compiled class files -->
+  <property name="example.classes.dir" value="${example.dir}/classes"/>
+
+  <!-- directory for example app jar file -->
+  <property name="example.lib.dir" value="${example.dir}/lib"/>
+
+  <!-- directory for example app config files -->
+  <property name="example.config.dir" location="${example.dir}/conf"/>
+
+  <!-- directory for junit test logs -->
+  <property name="example.testlog.dir" value="${example.dir}/testlog"/>
+
+  <!-- directory in which javadoc should be generated -->
+  <property name="example.javadoc.dir" location="${example.dir}/doc/java"/>
+
+  <!-- example app jar file -->
+  <property name="example.jar.file" value="./SessionAgg.jar"/>
+
+  <!-- a fileset of all sources in example application -->
+  <fileset dir="${example.src.dir}" id="fileset.example.src">
+	  <include name="com/**/*.java" />
+  </fileset>
+
+  <!-- a fileset of all example app classes documented with javadoc -->
+  <fileset dir="${example.src.dir}" id="fileset.example.javadoc">
+	  <include name="com/**/*.java" />
+  </fileset>
+
+  <!-- newline for use in constructing strings -->
+  <property name="nl" value="${line.separator}"/>
+
+  <!-- Classpaths -->
+
+  <path id="example.build.classpath">
+    <pathelement location="${sqlstream.jdbc.jar}"/>
+    <fileset dir="${example.lib.dir}">
+      <include name="**/*.jar" />
+    </fileset>
+  </path>
+
+  <path id="example.javadoc.classpath">
+    <pathelement location="${example.classes.dir}"/>
+    <pathelement location="${sqlstream.jdbc.jar}"/>
+    <pathelement location="${ant.home}/lib/junit.jar"/>
+    <pathelement location="${example.lib.dir}/*.jar"/>
+  </path>
+
+  <path id="example.run.classpath">
+    <pathelement location="${sqlstream.jdbc.jar}"/>
+    <fileset dir="${example.lib.dir}">
+      <include name="**/*.jar" />
+    </fileset>
+  </path>
+
+  <!-- ===================================================================== -->
+  <!-- Targets -->
+
+  <target name="all" description="default target" depends="jar, javadoc"/>
+
+  <target name="help">
+    <echo>
+      You must specify a specific project target.
+      Use "ant -p" to list the main targets.
+    </echo>
+  </target>
+
+  <!-- Check the environment -->
+  <target name="info">
+    <echo>==============================================================</echo>
+    <echo>| Build configuration info                                   |</echo>
+    <echo>==============================================================</echo>
+    <echo>example.dir           = ${example.dir}</echo>
+    <echo>ant.home              = ${ant.home}</echo>
+    <echo>jdk.home              = ${env.JAVA_HOME}</echo>
+    <echo>sqlstream.home        = ${sqlstream.home}</echo>
+    <echo>sqlstream.jdbc.jar    = ${sqlstream.jdbc.jar}</echo>
+    <echo>==============================================================</echo>
+    <fail message="SQLstream client driver not found">
+      <condition>
+        <not>
+          <available file="${sqlstream.jdbc.jar}"/>
+        </not>
+      </condition>
+    </fail>
+  </target>
+
+  <target name="clean" description="delete generated files">
+    <delete quiet="true" includeemptydirs="true">
+      <fileset dir="${example.classes.dir}" includes="classes/**/*.class"/>
+      <fileset file="${example.jar.file}"/>
+    </delete>
+  </target>
+
+  <target name="compile" description="compile application sources">
+    <mkdir dir="${example.classes.dir}"/>
+    <!-- includeantruntime attribute resolves an ant 1.8.2 weirdness -->
+    <javac debug="on"
+           source="1.8"
+           target="1.8"
+      includeantruntime="false"
+      srcdir="${example.src.dir}"
+      destdir="${example.classes.dir}"
+      classpathref="example.build.classpath"/>
+  </target>
+
+  <target name="jar" description="build application jar"
+      depends="compile">
+    <mkdir dir="${example.lib.dir}"/>
+    <!--unjar src="${sqlstream.server.jar}" dest="${example.classes.dir}">
+      <patternset>
+          <include name="com/sqlstream/plugin/PluginInfo.class"/>
+      </patternset>
+    </unjar-->
+    <jar destfile="${example.jar.file}"
+        update="false" compress="true" duplicate="fail" index="true">
+        <fileset dir="${example.classes.dir}"
+		includes="**/*.class"
+	/>
+      <manifest>
+        <attribute name="Implementation-Title" value="SessionAgg"/>
+        <attribute name="Implementation-Vendor" value="SQLstream Inc."/>
+        <attribute name="Main-Class" value="com.sqlstream.plugin.PluginInfo"/>
+        <attribute name="Built-Date" value="${TODAY}"/>
+        <attribute name="Specification-Version" value="6.0.0"/> 
+        <attribute name="Implementation-Version" value="0.1"/> 
+      </manifest>
+    </jar>
+  </target>
+
+  <target name="javadoc" description="generate application javadocs"
+      depends="compile, checkJavadocUptodate" unless="javadoc.uptodate" >
+    <delete includeEmptyDirs="true" quiet="true">
+      <fileset dir="${example.javadoc.dir}" includes="*"/>
+      <!-- remove stray package.html files under classes to avoid 
+           'multiple sources of package comments' errors -->
+      <fileset dir="${example.classes.dir}" includes="**/package.html"/>
+    </delete>
+    <mkdir dir="${example.javadoc.dir}"/>
+    <javadoc access="protected"
+        destdir="${example.javadoc.dir}"
+        overview="${example.src.dir}/overview.html"
+        classpathref="example.javadoc.classpath"
+        sourcepath="${example.src.dir}">
+      <packageset dir="${example.src.dir}"/>
+      <link href="http://docs.oracle.com/javase/6/docs/api/"/>
+      <link href="http://www.junit.org/junit/javadoc/3.8.1"/>
+      <bottom>Copyright (C) 2014-2019 SQLstream, Inc.</bottom>
+    </javadoc>
+  </target>
+
+  <target name="checkJavadocUptodate">
+    <uptodate property="javadoc.uptodate"
+      targetfile="${example.javadoc.dir}/index.html">
+      <srcfiles dir="${example.classes.dir}"/>
+      <srcfiles file="${example.src.dir}/overview.html"/>
+    </uptodate>
+  </target>
+
+</project>
