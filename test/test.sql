@@ -56,6 +56,7 @@ CREATE OR REPLACE FUNCTION "StrAgg"
 , "concatColumnName" VARCHAR(128)
 , "resultColumnName" VARCHAR(128)
 , "timeoutSecs" INTEGER
+, "separator" VARCHAR(10)
 ) RETURNS TABLE
 ( ROWTIME TIMESTAMP
 , "sessionId" BIGINT
@@ -74,4 +75,5 @@ SELECT STREAM * FROM STREAM("StrAgg"
    ,'charValue'
    ,'aggregatedValue'
    , 240
+   , '|'
    ));

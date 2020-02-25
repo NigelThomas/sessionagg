@@ -17,11 +17,14 @@ Example of use can be seen in `test/test.sql` and example of data in `test/test.
 
 * It is assumed that the session_id is a BIGINT rather than a VARCHAR. 
 * The total length of the string aggregation is limited to the maximum size of a VARCHAR
-* There is currently no control over the value of the separator between each string value
 * There is no attempt to check for very large cached sessions; if insufficient heap is allocated, out of memory errors could be reported
 
 ## Compromises
 
 * Currently this treats the input character string as a `String` and the aggregation as a `StringBuffer`; this could cause excessive garbage collection. Next steps will include optimization.
 
+# Change history
+
+* initial version
+* add separator parameter
 

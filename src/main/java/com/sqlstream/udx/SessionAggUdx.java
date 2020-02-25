@@ -27,6 +27,7 @@ public class SessionAggUdx
     private int ridx;
 
     long timeout_millis = 0L;
+    String separator;
 
     StreamingPreparedStatement out;
 
@@ -46,6 +47,7 @@ public class SessionAggUdx
             , String concatColumn
             , String resultColumnName
             , int timeout_secs
+            , String separator
             , PreparedStatement results
             )
         throws SQLException
@@ -53,6 +55,7 @@ public class SessionAggUdx
         super(tracer, inputRows, results);
 
         timeout_millis = 1000 * timeout_secs;
+        this.separator = separator;
 
         pidx = inputRows.findColumn(partitionColumn);
         if (inputRows.getMetaData().getColumnType(pidx) != Types.BIGINT &&
@@ -86,7 +89,7 @@ public class SessionAggUdx
         }
 
 
-        tracer.info("Inializing SessionAggUdx: pidx="+ridx+",cidx="+cidx+",ridx="+ridx+",timeout_ms="+timeout_millis );
+        tracer.info("Inializing SessionAggUdx: pidx="+ridx+",cidx="+cidx+",ridx="+ridx+",timeout_ms="+timeout_millis+", separator='"+separator+"'" );
     }
 
  
@@ -109,12 +112,13 @@ public class SessionAggUdx
             , String concatColumn
             , String resultColumnName
             , int timeout_secs
+            , String separator
             , PreparedStatement results
             ) throws SQLException
     {
         SessionAggUdx udx = new SessionAggUdx(
             tracer, inputRows, partitionColumn, concatColumn,
-            resultColumnName, timeout_secs, results
+            resultColumnName, timeout_secs, separator, results
             );
             try {
                 udx.execute();
@@ -225,7 +229,7 @@ public class SessionAggUdx
                     so.append(rtime,cValue);
                 } else {
                     if (tracer.isLoggable(Level.FINEST)) tracer.finest("new key");
-                    so = new StraggObject(tracer,rtime, partitionKey, cValue);
+                    so = new StraggObject(rtime, partitionKey, cValue);
                     straggMap.put(partitionKey, so);
                 }
 
@@ -245,26 +249,27 @@ public class SessionAggUdx
     }
 
        /** 
-     * An object to contain the concaenation (plus the sessionId and the latest rowtime)
+     * An object to contain the concatenation (plus the sessionId and the latest rowtime)
      */
     
     public class StraggObject {
+
         private StringBuffer concatValue;
         private long last_rt_millis;
         private long session_id;
-        private Logger tracer;
 
-        public StraggObject(Logger tracer, long ts_millis, long session_id, String initialValue) {
+        public StraggObject(long ts_millis, long session_id, String initialValue) {
             concatValue = new StringBuffer(initialValue);
             last_rt_millis = ts_millis;
             this.session_id = session_id;
-            this.tracer = tracer;
+
             if (tracer.isLoggable(Level.FINEST)) tracer.finest("Create sessionId="+session_id+", ts="+last_rt_millis+", cValue="+initialValue);
         }
 
         public void append(long ts_millis, String initialValue) {
-            concatValue.append(',').append(initialValue);
+            concatValue.append(separator).append(initialValue);
             last_rt_millis = ts_millis;
+
             if (tracer.isLoggable(Level.FINEST)) tracer.finest("Append sessionId="+session_id+", ts="+last_rt_millis+", cValue="+concatValue.toString());
         }
 
@@ -279,6 +284,7 @@ public class SessionAggUdx
         public String getConcatValue() {
             return concatValue.toString();
         }
+
     }
 
 }
