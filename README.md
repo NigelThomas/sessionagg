@@ -13,10 +13,16 @@ This operation is a combination of sliding and tumbling window behaviour:
 
 Example of use can be seen in `test/test.sql` and example of data in `test/test.csv`
 
+## Notes
+
+* A WARNING is logged to the trace file if the output would overflow the target column - and the data is truncated
+
 ## Limitations
 
 * It is assumed that the session_id is a BIGINT rather than a VARCHAR. 
-* The total length of the string aggregation is limited to the maximum size of a VARCHAR
+* The session_id must be a single column
+* the cValue must be a single column (that can easily be arranged upstream of this function)
+* The maximum length of the string aggregation is limited to the maximum size of a VARCHAR which is 1048575
 * There is no attempt to check for very large cached sessions; if insufficient heap is allocated, out of memory errors could be reported
 
 ## Compromises
@@ -27,4 +33,5 @@ Example of use can be seen in `test/test.sql` and example of data in `test/test.
 
 * initial version
 * add separator parameter
+* check the length of the output string against the metadata precision/length of the output column
 

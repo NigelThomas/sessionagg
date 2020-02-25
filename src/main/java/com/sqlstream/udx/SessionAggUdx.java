@@ -19,12 +19,12 @@ public class SessionAggUdx
     public static final Logger tracer =
         Logger.getLogger(SessionAggUdx.class.getName());
 
-    StringBuilder valueBuffer;
-    private int pidx;
+    private int pidx;                       // index to partition (session) id column
     private byte[] partitionBytes = null;
     private int pByteLength = 0;
-    private int cidx;
-    private int ridx;
+    private int cidx;                       // index to input char column
+    private int ridx;                       // index to result col
+    private int maxlen;                     // max length of output column
 
     long timeout_millis = 0L;
     String separator;
@@ -33,7 +33,6 @@ public class SessionAggUdx
 
     private long rtime;
     private long last_rtime = 0;
-    boolean hasRow = false;
 
     //TLongObjectHashMap<StraggObject> straggMap;
     LinkedHashMap<Long,StraggObject> straggMap = new LinkedHashMap<>();
@@ -80,7 +79,9 @@ public class SessionAggUdx
         }
         
         ridx = colMap.get(resultColumnName)[COL_IDX];
-        int rtype = results.getParameterMetaData().getParameterType(ridx);
+        ParameterMetaData pmd = results.getParameterMetaData();
+        int rtype = pmd.getParameterType(ridx);
+        maxlen = pmd.getPrecision(ridx);
 
         if ( rtype != Types.CHAR && rtype != Types.VARCHAR)
         {
@@ -136,7 +137,7 @@ public class SessionAggUdx
     private void emitRows(boolean waitForPeriod) throws SQLException {
         long timeThreshold = (waitForPeriod)?last_rtime - timeout_millis : 0;
 
-        tracer.info("emit rows - "+((waitForPeriod)?"normal":"closing")+" threshold time="+timeThreshold);
+        if (tracer.isLoggable(Level.FINE)) tracer.fine("emit rows - "+((waitForPeriod)?"normal":"closing")+" threshold time="+timeThreshold);
 
         // stream entries
         // filter, allow only expired sessions (unless waitForPeriod is false)
@@ -157,14 +158,26 @@ public class SessionAggUdx
                             if (tracer.isLoggable(Level.FINEST)) tracer.finest("time="+e.getTime()+",session="+sessionId+",val="+e.getConcatValue() );
                             out.setTimestamp(1, new Timestamp(e.getTime()));
                             out.setLong(2, sessionId);
-                            out.setString(3, e.getConcatValue());
+                            String cValue = e.getConcatValue();
+
+                            // if (cValue.length() > 1048575) {
+                            //     // too large for any VARCHAR
+                            //     tracer.warning("Truncating output for session_id="+sessionId+" - length > 1048575");
+                            //     cvalue = cValue.substring(0,1048575);
+                            // }
+
+                            if (cValue.length() > maxlen) {
+                                // too large for output VARCHAR
+                                tracer.warning("Truncating output for session_id="+sessionId+" - length > "+maxlen);
+                                cValue = cValue.substring(0,maxlen);
+
+                            }
+                            out.setString(3, cValue);
                             out.executeUpdate();
                         } catch (Exception ex) {
                             throw new RuntimeException(ex);
                         }
-                        if (tracer.isLoggable(Level.FINER)) {
-                            tracer.finer("Emitted session id "+sessionId);
-                        }
+                        if (tracer.isLoggable(Level.FINER)) tracer.finer("Emitted session id "+sessionId);
                         // prepare to discard used session from the original map
                         deadSessionList.add(sessionId);
             });
