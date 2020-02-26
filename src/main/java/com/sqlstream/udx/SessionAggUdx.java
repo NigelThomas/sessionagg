@@ -151,7 +151,7 @@ public class SessionAggUdx
                    //.peek(e -> tracer.info("First Peek: session:"+e.getSessionId()+"at time:"+e.getTime()))
                    .filter(e -> e.getTime() < timeThreshold)
                    //.peek(e -> tracer.info("Second Peek after filter: session:"+e.getSessionId()+"at time:"+e.getTime()))
-                   .sorted((e1, e2) -> Long.compare(e2.getTime(), e1.getTime()))
+                   .sorted((e1, e2) -> Long.compare(e1.getTime(), e2.getTime()))
                    .forEachOrdered(e -> {
                         long sessionId = e.getSessionId();
                         try {

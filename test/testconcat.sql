@@ -41,14 +41,16 @@ create or replace stream "test_stream_in"
 create or replace pump "test_pump_in" stopped
 as
 insert into "test_stream_in"
-(rowtime, "eventtime", "sessionId", "charValue", "intValue","bigintValue", "binaryValue","notes")
-select STREAM CAST("eventtime" AS TIMESTAMP)
+(rowtime, "eventtime", "sessionId", "charValue", "intValue","bigintValue"
+, "binaryValue"
+,"notes")
+select STREAM CAST("eventtime" AS TIMESTAMP) 
 , "eventtime"
 , "sessionId"
 , "charValue"
 , "intValue" 
 , "bigintValue" 
-, X'fedcba9876543210'
+, varchar_to_varbinary('FEDCBA9876543210')
 , "notes"
 from "test_concat_fs";
 
